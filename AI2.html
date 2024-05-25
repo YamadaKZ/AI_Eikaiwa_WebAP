@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+  />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.4/axios.min.js"></script>
+  <title>Document</title>
+  <style>
+    main {
+      margin: 0 auto;
+      width: 940px;
+    }
+    header,
+    footer {
+      width: 100%;
+    }
+    header {
+      border-top: 10px solid #efc53a;
+    }
+    header h1 {
+      margin: 50px 0 30px 0;
+      text-align: center;
+    }
+    header h1 img {
+      width: 240px;
+    }
+    header nav ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      justify-content: center;
+    }
+    header nav ul li {
+      width: 155px;
+      margin-right: 6px;
+      float: left;
+      background-color: #fdbf64;
+    }
+    header nav ul li a {
+      color: white;
+      text-decoration: none;
+    }
+    header nav ul li:hover,
+    header nav ul li:active {
+      background-color: #c0db75;
+    }
+    a {
+      padding: 5px;
+      display: block;
+    }
+    footer {
+      background-color: #fdbf64;
+      color: #fff;
+      padding: 30px 0;
+      text-align: center;
+    }
+    footer ul {
+      padding: 0;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: center;
+      list-style: none;
+    }
+    footer ul li {
+      margin: 0 10px;
+    }
+    footer ul li a {
+      color: #fff;
+      text-decoration: none;
+    }
+    footer ul li a:link,
+    footer ul li a:active {
+      text-decoration: underline;
+    }
+    #main_visual img {
+      width: 100%;
+      height: auto;
+    }
+    .conversation-container {
+      margin-top: 20px;
+      border: 2px solid #ccc;
+      border-radius: 4px;
+      height: 200px;
+      overflow-y: scroll;
+      padding: 10px;
+    }
+    .conversation {
+      margin-bottom: 10px;
+    }
+    .message {
+      margin-bottom: 10px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .user-message {
+      background-color: #c3d9ff;
+    }
+    .ai-message {
+      background-color: #e5ffe5;
+    }
+    .spacer {
+      height: 20px;
+    }
+    .main-image {
+    width: 100%;
+    height: auto;
+    max-width: 940px;
+    margin: 20px auto;
+    display: block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><img src="images/logo.jpeg"></h1>
+    <nav>
+      <ul class="horizontal-nav">
+        <li class="current"><a href="index.html">HOME</a></li>
+        <li><a href="tango.html">英単語</a></li>
+        <li><a href="AI2.html">英会話</a></li>
+        <li><a href="about.html">相談部屋</a></li>
+        <li><a href="right.html">CONTACT</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main>
+    <h2>AIチャットアプリ使い方</h2>
+    <p>①「音声認識を開始」ボタンを押してください</p>
+    <p>②会話したい内容を話してください</p>
+    <p>③話終えたら「停止」ボタンを押してください</p>
+    <p>④会話を一から始めたい場合は、ロゴの下の「英会話」ボタンを押してください</p>
+    <p>＊テキストで送信したい場合は、四角形の中にテキストを挿入し、「送信」ボタンを押してください</p>
+    <button type="button" class="start">音声認識を開始</button>
+    <button type="button" class="stop">停止</button>
+    <input type="text" name="talk" />
+    <button type="button" class="send">送信</button>
+    <div class="conversation-container">
+      <div class="conversation"></div>
+    </div>
+    <div class="spacer"></div>
+    <img src="images/main.jpg" alt="Main Image" class="main-image" />
+    <audio class="audio"></audio>
+  </main>
+
+  <script>
+
+    //ChatGPTのAPIを挿入する
+    const api_key = "<APIを挿入してください>";
+
+
+    //テキストを送るボタン
+    const sendButton = document.querySelector(".send");
+    sendButton.addEventListener("click", async () => {
+      const text = document.querySelector("[name=talk]").value;
+      await sendMessage(text);
+    });
+
+    //スタートボタン
+    const startButton = document.querySelector(".start");
+    startButton.addEventListener("click", () => {
+      recognition.start();
+    });
+    //ストップボタン
+    const stopButton = document.querySelector(".stop");
+    stopButton.addEventListener("click", () => {
+      recognition.stop();
+    });
+
+    //音声認識
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.onresult = ({ results }) => {
+      const text = results[0][0].transcript;
+      sendMessage(text);
+    };
+
+    //ChatGPT APIに対してリクエストを送信
+    async function sendMessage(text) {
+      const conversation = document.querySelector(".conversation");
+  
+      conversation.innerHTML += `
+        <div class="message user-message">
+          <strong>User:</strong> ${text}
+        </div>
+      `;
+  
+      const responseText = await requestChatAPI(text);
+  
+      conversation.innerHTML += `
+        <div class="message ai-message">
+          <strong>AI:</strong> ${responseText}
+        </div>
+      `;
+  
+      // ChatGPTから返ってきた文章を音声合成
+      synthesizeSpeech(responseText);
+  
+      await createAudio(responseText);
+      conversation.scrollTop = conversation.scrollHeight;
+    }
+
+    //ChatGPT APIへのリクエスト
+    async function requestChatAPI(text) {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${api_key}`,
+      };
+
+      //AIの人格（あなたは英語の先生です。生徒に聞かれたことに答えて、会話してください）
+      const messages = [
+        { "role": "system", "content": "You are an English teacher. Answer the questions your students ask you and have a conversation with them."},
+        {"role": "user", "content": text }
+      ];
+  
+      const payload = {
+        model: "gpt-3.5-turbo",
+        max_tokens: 128,
+        messages: messages,
+      };
+
+      const response = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        payload,
+        {
+          headers: headers,
+        }
+      );
+
+      return response.data.choices[0].message.content;
+    }
+
+
+  
+    // 音声合成のための関数
+    function synthesizeSpeech(text) {
+      if ("speechSynthesis" in window) {
+        // SpeechSynthesis APIがサポートされている場合
+  
+        // SpeechSynthesisUtteranceオブジェクトを作成
+        let u = new SpeechSynthesisUtterance();
+        u.lang = 'en-US';
+        u.text = text;
+        speechSynthesis.speak(u);
+        
+      } else {
+        // SpeechSynthesis APIがサポートされていない時
+        console.error("SpeechSynthesis APIはサポートされていません。");
+      }
+    }
+  </script>
+
+  <footer>
+    <ul class="horizontal-nav">
+      <li class="current"><a href="index.html">HOME</a></li>
+      <li><a href="tango.html">英単語</a></li>
+      <li><a href="AI2.html">英会話</a></li>
+      <li><a href="about.html">相談部屋</a></li>
+      <li><a href="right.html">CONTACT</a></li>
+    </ul>
+    <small>&copy; 2023 AI 英会話, All Right Reserved.</small>
+  </footer>
+</body>
+</html>
+
+
+
+  
